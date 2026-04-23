@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Kuromi Battle</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: 'Press Start 2P', monospace;
+  color: white;
+}
+
+/* FULL SCREEN BACKGROUND */
+#bg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+  image-rendering: pixelated;
+}
+
+/* OVERLAY to darken bottom for readability */
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(to bottom,
+    rgba(0,0,0,0) 0%,
+    rgba(0,0,0,0) 45%,
+    rgba(0,0,0,0.55) 100%
+  );
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* SPRITES absolutely placed on screen */
+#enemySprite {
+  position: fixed;
+  left: 60%;
+  top: 22%;
+  transform: translateX(-50%);
+  width: 280px;
+  height: 280px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 12px rgba(255, 42, 42, 0.7));
+  animation: enemyFloat 3s ease-in-out infinite;
+  z-index: 2;
+}
+
+#playerSprite {
+  position: fixed;
+  left: px;
+  bottom: 185px;
+  width: 300px;
+  height: 300px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 12px rgba(155, 0, 255, 0.7));
+  animation: playerFloat 3.2s ease-in-out infinite;
+  z-index: 2;
+}
+
+@keyframes enemyFloat {
+  0%, 100% { transform: translateX(-50%) translateY(0px); }
+  50% { transform: translateX(-50%) translateY(-8px); }
+}
+
+@keyframes playerFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+/* HP PANELS — pinned to top and middle */
+#enemy-panel {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  width: 180px;
+  background: rgba(0,0,0,0.72);
+  border: 2px solid rgba(255,255,255,0.35);
+  border-radius: 10px;
+  padding: 9px 11px;
+  z-index: 3;
+}
+
+#player-panel {
+  position: fixed;
+  bottom: 195px;
+  left: 14px;
+  width: 180px;
+  background: rgba(0,0,0,0.72);
+  border: 2px solid rgba(255,255,255,0.35);
+  border-radius: 10px;
+  padding: 9px 11px;
+  z-index: 3;
+}
+
+.panel-name {
+  font-size: 7px;
+  color: white;
+  line-height: 1.6;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.hp-label {
+  font-size: 6px;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 3px;
+}
+
+.hp-bar {
+  background: rgba(0,0,0,0.5);
+  height: 9px;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.2);
+  margin-bottom: 4px;
+}
+
+.hp-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 5px;
+  background: #39ff14;
+  transition: width 0.4s ease, background 0.4s;
+}
+
+.hp-fill.low { background: #ffe600; }
+.hp-fill.critical { background: #ff2a2a; }
+
+.hp-text {
+  font-size: 6px;
+  color: white;
+  opacity: 0.85;
+}
+
+/* BOTTOM BATTLE PANEL */
+#bottom-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0,0,0,0.88);
+  border-top: 2px solid rgba(255,255,255,0.25);
+  padding: 10px 12px 14px;
+  z-index: 4;
+  backdrop-filter: blur(8px);
+}
+
+.log {
+  height: 48px;
+  overflow-y: auto;
+  font-size: 6.5px;
+  color: white;
+  line-height: 1.9;
+  margin-bottom: 10px;
+  scrollbar-width: none;
+}
+
+.log::-webkit-scrollbar { display: none; }
+
+.log-line { color: white; padding: 1px 0; }
+
+.moves {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.move-btn {
+  padding: 10px 6px;
+  font-size: 6.5px;
+  font-family: 'Press Start 2P', monospace;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.move-btn:hover, .move-btn:active {
+  background: rgba(155,0,255,0.35);
+  border-color: rgba(155,0,255,0.8);
+  transform: scale(1.04);
+  box-shadow: 0 0 10px rgba(155,0,255,0.4);
+}
+
+.move-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+}
+
+.restart-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  background: #cc0000;
+  color: white;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* HIT ANIMATIONS */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); }
+  40% { transform: translateX(7px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+.shake { animation: shake 0.35s ease !important; }
+
+/* MOVE-SPECIFIC FLASH COLORS */
+@keyframes flashPink {
+  0%   { filter: drop-shadow(0 0 12px rgba(255,42,42,0.7)); }
+  25%  { filter: brightness(4) sepia(1) saturate(10) hue-rotate(280deg) drop-shadow(0 0 40px #ff69b4) drop-shadow(0 0 60px #ff00aa); }
+  50%  { filter: brightness(1.5) sepia(1) saturate(6) hue-rotate(280deg) drop-shadow(0 0 20px #ff69b4); }
+  75%  { filter: brightness(4) sepia(1) saturate(10) hue-rotate(280deg) drop-shadow(0 0 50px #ff69b4) drop-shadow(0 0 80px #ff00aa); }
+  100% { filter: drop-shadow(0 0 12px rgba(255,42,42,0.7)); }
+}
+@keyframes flashRed {
+  0%   { filter: drop-shadow(0 0 12px rgba(255,42,42,0.7)); }
+  25%  { filter: brightness(5) sepia(1) saturate(8) hue-rotate(330deg) drop-shadow(0 0 40px red) drop-shadow(0 0 70px #ff4400); }
+  50%  { filter: brightness(2) sepia(1) saturate(5) hue-rotate(330deg) drop-shadow(0 0 20px red); }
+  75%  { filter: brightness(5) sepia(1) saturate(8) hue-rotate(330deg) drop-shadow(0 0 50px red) drop-shadow(0 0 80px #ff4400); }
+  100% { filter: drop-shadow(0 0 12px rgba(255,42,42,0.7)); }
+}
+@keyframes flashYellow {
+  0%   { filter: drop-shadow(0 0 12px rgba(255,42,42,0.7)); }
+  25%  { filter: brightness(5) sepia(1) saturate(8) hue-rotate(10deg) drop-shadow(0 0 40px #ffe600) drop-shadow(0 0 70px #ffaa00); }
+  50%  { filter: brightness(2) sepia(1) saturate(5) hue-rotate(10deg) drop-shadow(0 0 20px #ffe600); }
+  75%  { filter: brightness(5) sepia(1) saturate(8) hue-rotate(10deg) drop-shadow(0 0 50px #ffe600) drop-shadow(0 0 80px #ffaa00); }
+  100% { filter: drop-shadow(0 0 12px rgba(255,42,42,0.7)); }
+}
+@keyframes flashBlue {
+  0%   { filter: drop-shadow(0 0 12px rgba(255,42,42,0.7)); }
+  25%  { filter: brightness(4) sepia(1) saturate(10) hue-rotate(180deg) drop-shadow(0 0 40px #00cfff) drop-shadow(0 0 70px #0044ff); }
+  50%  { filter: brightness(1.5) sepia(1) saturate(6) hue-rotate(180deg) drop-shadow(0 0 20px #00cfff); }
+  75%  { filter: brightness(4) sepia(1) saturate(10) hue-rotate(180deg) drop-shadow(0 0 50px #00cfff) drop-shadow(0 0 80px #0044ff); }
+  100% { filter: drop-shadow(0 0 12px rgba(255,42,42,0.7)); }
+}
+@keyframes flashEnemyHit {
+  0%   { filter: drop-shadow(0 0 12px rgba(155,0,255,0.7)); }
+  25%  { filter: brightness(5) sepia(1) saturate(8) hue-rotate(330deg) drop-shadow(0 0 40px red) drop-shadow(0 0 70px #ff4400); }
+  50%  { filter: brightness(2) sepia(1) saturate(5) hue-rotate(330deg) drop-shadow(0 0 20px red); }
+  75%  { filter: brightness(5) sepia(1) saturate(8) hue-rotate(330deg) drop-shadow(0 0 50px red) drop-shadow(0 0 80px #ff4400); }
+  100% { filter: drop-shadow(0 0 12px rgba(155,0,255,0.7)); }
+}
+
+.flash-kiss   { animation: flashPink     0.5s ease 2; }
+.flash-bite   { animation: flashRed      0.5s ease 2; }
+.flash-pacute { animation: flashYellow   0.5s ease 2; }
+.flash-sing   { animation: flashBlue     0.5s ease 2; }
+.flash-enemy  { animation: flashEnemyHit 0.5s ease 2; }
+
+/* LIGHT BURST PARTICLE */
+.light-burst {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 98;
+  animation: burstOut 0.5s ease-out forwards;
+}
+
+@keyframes burstOut {
+  0%   { transform: translate(-50%, -50%) scale(0); opacity: 0.95; }
+  50%  { opacity: 0.7; }
+  100% { transform: translate(-50%, -50%) scale(3.5); opacity: 0; }
+}
+
+/* FLOATING EMOJI EFFECT */
+.float-emoji {
+  position: fixed;
+  font-size: 32px;
+  pointer-events: none;
+  z-index: 99;
+  animation: floatUp 0.9s ease-out forwards;
+  user-select: none;
+}
+
+@keyframes floatUp {
+  0%   { transform: translateY(0px) scale(1);    opacity: 1; }
+  60%  { transform: translateY(-70px) scale(1.3); opacity: 1; }
+  100% { transform: translateY(-120px) scale(0.8); opacity: 0; }
+}
+
+/* TAUNT SPEECH BUBBLE */
+#taunt-bubble {
+  position: fixed;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.88);
+  border: 2px solid rgba(255,50,50,0.8);
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 7px;
+  color: white;
+  text-align: center;
+  z-index: 10;
+  max-width: 240px;
+  line-height: 1.8;
+  display: none;
+  animation: popIn 0.3s ease;
+}
+
+#taunt-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(255,50,50,0.8);
+}
+
+/* YOU WIN OVERLAY */
+#win-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.0);
+  z-index: 50;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 18px;
+}
+
+#win-overlay.show {
+  display: flex;
+  animation: winFadeIn 0.6s ease forwards;
+}
+
+@keyframes winFadeIn {
+  from { background: rgba(0,0,0,0); }
+  to   { background: rgba(0,0,0,0.55); }
+}
+
+#win-box {
+  background: rgba(0,0,0,0.92);
+  border: 3px solid #39ff14;
+  border-radius: 16px;
+  padding: 28px 38px;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(57,255,20,0.5), 0 0 80px rgba(57,255,20,0.2);
+  animation: winPop 0.5s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+}
+
+@keyframes winPop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  80%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+#win-title {
+  font-size: 22px;
+  color: #39ff14;
+  text-shadow: 0 0 20px #39ff14, 0 0 40px #39ff14;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+  animation: winPulse 1s ease-in-out infinite;
+}
+
+@keyframes winPulse {
+  0%, 100% { text-shadow: 0 0 20px #39ff14, 0 0 40px #39ff14; }
+  50% { text-shadow: 0 0 40px #39ff14, 0 0 80px #39ff14, 0 0 120px lime; }
+}
+
+#win-sub {
+  font-size: 7px;
+  color: rgba(255,255,255,0.75);
+  line-height: 2;
+  margin-bottom: 4px;
+}
+
+#win-returning {
+  font-size: 6px;
+  color: rgba(255,255,255,0.4);
+  margin-top: 10px;
+  animation: blink 1.2s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- BACKGROUND -->
+<img id="bg" src="pics/bgbattle.png" alt="bg">
+<div id="overlay"></div>
+
+<!-- BACKGROUND MUSIC -->
+<audio id="bgm" src="pics/bgm.m4a" loop></audio>
+
+<!-- SPRITES -->
+<img id="enemySprite" src="pics/aistubig.png" alt="Nababaliw na BF">
+<img id="playerSprite" src="pics/kuromipixel.png" alt="Kuromi">
+
+<!-- ENEMY HP PANEL -->
+<div id="enemy-panel">
+  <div class="panel-name">baliw<br>na boyfriend</div>
+  <div class="hp-label">HP</div>
+  <div class="hp-bar"><div id="enemyHP" class="hp-fill"></div></div>
+  <div id="enemyText" class="hp-text">50 / 50</div>
+</div>
+
+<!-- PLAYER HP PANEL -->
+<div id="player-panel">
+  <div class="panel-name">KUROMI</div>
+  <div class="hp-label">HP</div>
+  <div class="hp-bar"><div id="playerHP" class="hp-fill"></div></div>
+  <div id="playerText" class="hp-text">50 / 50</div>
+</div>
+
+<!-- TAUNT BUBBLE -->
+<div id="taunt-bubble"></div>
+
+<!-- YOU WIN OVERLAY -->
+<div id="win-overlay">
+  <div id="win-box">
+    <div id="win-title">🎉 YOU WIN! 🎉</div>
+    <div id="win-sub">baliw na bf ay natalo na!<br>si Kuromi ang nagtagumpay!</div>
+    <div id="win-returning">returning to game...</div>
+  </div>
+</div>
+
+<!-- BOTTOM BATTLE PANEL -->
+<div id="bottom-panel">
+  <div class="log" id="log"></div>
+  <div class="moves" id="moveButtons">
+    <button class="move-btn" onclick="playerMove('kiss')">💋 Kiss<br><span style="opacity:0.55;font-size:5.5px">(10 dmg)</span></button>
+    <button class="move-btn" onclick="playerMove('bite')">🦷 Bite<br><span style="opacity:0.55;font-size:5.5px">(20 dmg)</span></button>
+    <button class="move-btn" onclick="playerMove('pacute')">🌸 Pacute<br><span style="opacity:0.55;font-size:5.5px">(buff)</span></button>
+    <button class="move-btn" onclick="playerMove('sing')">🎵 Sing<br><span style="opacity:0.55;font-size:5.5px">(?)</span></button>
+  </div>
+</div>
+
+<script>
+let playerHP = 50;
+let enemyHP = 50;
+const maxHP = 50;
+let buff = false;
+let enemyFlinch = false;
+let gameOver = false;
+
+/* BACKGROUND MUSIC — resume from saved position, autoplay immediately */
+const bgm = document.getElementById("bgm");
+bgm.volume = 0.2;
+const savedBgmTime = parseFloat(sessionStorage.getItem("bgm_time") || "0");
+bgm.currentTime = savedBgmTime;
+sessionStorage.removeItem("bgm_time");
+bgm.play().catch(() => {
+    const unlock = () => { bgm.play().catch(() => {}); };
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+});
+
+const logEl = document.getElementById("log");
+const playerHPBar = document.getElementById("playerHP");
+const enemyHPBar = document.getElementById("enemyHP");
+const playerSprite = document.getElementById("playerSprite");
+const enemySprite = document.getElementById("enemySprite");
+const tauntBubble = document.getElementById("taunt-bubble");
+
+const taunts = [
+  "haha. weak.",
+  "is that all you got?",
+  "mahinang nilalang ka.",
+  "ang dali dali mo.",
+  "pathetic.",
+  "try harder next time.",
+  "di ka worthy.",
+  "😂 weak.",
+  "baka naman.",
+  "ganyan lang kaya mo?",
+  "mahinang nilalang.",
+  "lol. goodbye.",
+];
+
+function showTaunt() {
+  const msg = taunts[Math.floor(Math.random() * taunts.length)];
+  tauntBubble.textContent = msg;
+  tauntBubble.style.display = "block";
+}
+
+function log(text) {
+  const line = document.createElement("div");
+  line.className = "log-line";
+  line.textContent = text;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function clearLog() { logEl.innerHTML = ""; }
+
+function updateHPBar(el, current, max) {
+  const pct = (current / max) * 100;
+  el.style.width = pct + "%";
+  el.classList.remove("low", "critical");
+  if (pct <= 25) el.classList.add("critical");
+  else if (pct <= 50) el.classList.add("low");
+}
+
+function updateUI() {
+  document.getElementById("playerText").innerText = playerHP + " / " + maxHP;
+  document.getElementById("enemyText").innerText = enemyHP + " / " + maxHP;
+  updateHPBar(playerHPBar, playerHP, maxHP);
+  updateHPBar(enemyHPBar, enemyHP, maxHP);
+}
+
+function flashSprite(el, cls) {
+  el.classList.remove('flash-kiss','flash-bite','flash-pacute','flash-sing','flash-enemy');
+  void el.offsetWidth;
+  el.classList.add(cls);
+  setTimeout(() => el.classList.remove(cls), 1050);
+}
+
+function spawnEmoji(emoji, targetEl) {
+  const rect = targetEl.getBoundingClientRect();
+  const el = document.createElement("div");
+  el.className = "float-emoji";
+  el.textContent = emoji;
+  el.style.left = (rect.left + rect.width / 2 - 16) + "px";
+  el.style.top  = (rect.top  + rect.height / 2 - 16) + "px";
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 950);
+}
+
+function spawnBursts(targetEl, color, count = 5) {
+  const rect = targetEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top  + rect.height / 2;
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => {
+      const el = document.createElement("div");
+      el.className = "light-burst";
+      const size = 30 + Math.random() * 50;
+      const ox = (Math.random() - 0.5) * rect.width * 0.8;
+      const oy = (Math.random() - 0.5) * rect.height * 0.8;
+      el.style.cssText = `left:${cx+ox}px;top:${cy+oy}px;width:${size}px;height:${size}px;background:radial-gradient(circle,${color} 0%,transparent 70%);`;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 550);
+    }, i * 60);
+  }
+}
+
+function shakeEl(el) {
+  el.classList.remove("shake");
+  void el.offsetWidth;
+  el.classList.add("shake");
+  setTimeout(() => el.classList.remove("shake"), 400);
+}
+
+function disableMoves(disabled) {
+  document.querySelectorAll(".move-btn").forEach(b => b.disabled = disabled);
+}
+
+function playerMove(move) {
+  if (gameOver) return;
+  disableMoves(true);
+  let damage = 0;
+
+  if (move === 'kiss') {
+    damage = buff ? 20 : 10;
+    log("Kuromi used Kiss! -" + damage + " dmg 💋");
+    buff = false;
+    flashSprite(enemySprite, 'flash-kiss');
+    shakeEl(enemySprite);
+    spawnBursts(enemySprite, 'rgba(255,105,180,0.85)');
+    spawnEmoji('💋', enemySprite);
+    setTimeout(() => spawnEmoji('💋', enemySprite), 200);
+  }
+  if (move === 'bite') {
+    damage = buff ? 30 : 20;
+    log("Kuromi used Bite! -" + damage + " dmg 🦷");
+    buff = false;
+    flashSprite(enemySprite, 'flash-bite');
+    shakeEl(enemySprite);
+    spawnBursts(enemySprite, 'rgba(255,50,0,0.85)');
+    spawnEmoji('🦷', enemySprite);
+    spawnEmoji('💥', enemySprite);
+  }
+  if (move === 'pacute') {
+    buff = true;
+    enemyFlinch = true;
+    log("Kuromi used Pacute! 🌸 Enemy flinched + next atk boosted!");
+    flashSprite(enemySprite, 'flash-pacute');
+    spawnBursts(enemySprite, 'rgba(255,220,0,0.85)');
+    spawnEmoji('🌸', enemySprite);
+    setTimeout(() => spawnEmoji('✨', enemySprite), 150);
+    setTimeout(() => spawnEmoji('🌸', enemySprite), 300);
+  }
+  if (move === 'sing') {
+    log("Kuromi sang a song... 🎵 nothing happened.");
+    flashSprite(enemySprite, 'flash-sing');
+    spawnBursts(enemySprite, 'rgba(0,180,255,0.85)');
+    spawnEmoji('🎵', enemySprite);
+    setTimeout(() => spawnEmoji('🎶', enemySprite), 200);
+  }
+
+  enemyHP = Math.max(0, enemyHP - damage);
+  updateUI();
+
+  if (enemyHP <= 0) {
+    log("baliw na bf fainted! You win! 🎉");
+    gameOver = true;
+    showWin();
+    return;
+  }
+
+  setTimeout(enemyTurn, 700);
+}
+
+function enemyTurn() {
+  if (gameOver) return;
+
+  if (enemyFlinch) {
+    log("baliw na bf flinched! Couldn't move!");
+    enemyFlinch = false;
+    disableMoves(false);
+    return;
+  }
+
+  const useStrong = Math.random() < 0.6;
+  const damage = useStrong ? 40 : 30;
+  const moveName = useStrong ? "I hate u!!" : "Putanaydamo!!";
+
+  flashSprite(playerSprite, 'flash-enemy');
+  shakeEl(playerSprite);
+  spawnBursts(playerSprite, 'rgba(255,50,0,0.85)');
+  spawnEmoji('😤', playerSprite);
+
+  playerHP = Math.max(0, playerHP - damage);
+  log("baliw na bf used " + moveName + " -" + damage + " 😤");
+  updateUI();
+
+  if (playerHP <= 0) {
+    log("Kuromi fainted... Try again! 💀");
+    gameOver = true;
+    showTaunt();
+    showRestart();
+    return;
+  }
+
+  disableMoves(false);
+}
+
+function showWin() {
+  // Change enemy sprite to defeated pose, same position & size
+  enemySprite.src = "pics/defeatais.png";
+  enemySprite.style.animation = "none"; // stop floating
+  enemySprite.style.filter = "drop-shadow(0 0 18px rgba(57,255,20,0.8))";
+
+  // Show YOU WIN overlay after brief pause
+  setTimeout(() => {
+    document.getElementById("win-overlay").classList.add("show");
+  }, 600);
+
+  // Redirect back to game.html after 3.5s
+  setTimeout(() => {
+    sessionStorage.setItem("aistubig_defeated", "1");
+    sessionStorage.setItem("bgm_time", bgm.currentTime);
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:black;opacity:0;z-index:9999;transition:opacity 1.2s ease;pointer-events:all;";
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => {
+      overlay.style.opacity = "1";
+      setTimeout(() => { window.location.href = "game.html"; }, 1300);
+    });
+  }, 3500);
+}
+
+function showRestart() {
+  const btn = document.createElement("button");
+  btn.innerText = "↩ Try Again";
+  btn.className = "restart-btn";
+  btn.onclick = restartGame;
+  logEl.appendChild(btn);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function restartGame() {
+  playerHP = 50; enemyHP = 50;
+  buff = false; enemyFlinch = false; gameOver = false;
+  clearLog(); updateUI(); disableMoves(false);
+  tauntBubble.style.display = "none";
+  log("New battle! ⚔");
+}
+
+updateUI();
+log("A wild baliw na boyfriend appeared! ⚔");
+</script>
+</body>
+</html>

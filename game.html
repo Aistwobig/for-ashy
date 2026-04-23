@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Save Ashy</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: black;
+    image-rendering: pixelated;
+}
+
+/* GAME */
+#game {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+}
+
+/* WORLD */
+#world {
+    position: absolute;
+    top: 0;
+    left: 0;
+    will-change: transform;
+}
+
+/* MAP */
+#map {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+/* ENTITIES */
+.entity {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    will-change: transform;
+}
+
+/* SPRITES */
+.entity img {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+/* 🌊 PLAYER FLOAT + 🟣 PURPLE AURA */
+#playerSprite {
+    animation: float 2.8s ease-in-out infinite;
+    transform-origin: center;
+
+    filter:
+        drop-shadow(0 0 6px rgba(180, 0, 255, 0.9))
+        drop-shadow(0 0 14px rgba(120, 0, 255, 0.6))
+        drop-shadow(0 0 28px rgba(90, 0, 255, 0.4));
+}
+
+/* 🌑 shadow */
+#player::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 14px;
+    background: rgba(0,0,0,0.45);
+    border-radius: 50%;
+    filter: blur(3px);
+    animation: shadowFloat 2.8s ease-in-out infinite;
+}
+
+/* 🌬️ NPC breathing */
+.npc-breathe {
+    animation: breathe 2.6s ease-in-out infinite;
+    transform-origin: center bottom;
+}
+
+/* FLOAT */
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+    100% { transform: translateY(0px); }
+}
+
+/* SHADOW */
+@keyframes shadowFloat {
+    0% { transform: translateX(-50%) scale(1); opacity: 0.4; }
+    50% { transform: translateX(-50%) scale(0.75); opacity: 0.25; }
+    100% { transform: translateX(-50%) scale(1); opacity: 0.4; }
+}
+
+/* BREATH */
+@keyframes breathe {
+    0% { transform: scale(1) translateY(0px); }
+    50% { transform: scale(1.04) translateY(-2px); }
+    100% { transform: scale(1) translateY(0px); }
+}
+
+/* DIALOG */
+#dialogue-box {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.88);
+    color: white;
+    padding: 16px 20px;
+    border: 2px solid white;
+    font-family: Arial;
+    font-size: 16px;
+    display: none;
+    max-width: 75%;
+    min-width: 340px;
+    text-align: left;
+    z-index: 100;
+    border-radius: 6px;
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+    #dialogue-box {
+        bottom: 220px;
+        min-width: 280px;
+        max-width: 85%;
+        font-size: 14px;
+    }
+}
+
+#dialogue-name {
+    font-weight: bold;
+    color: #ffaaff;
+    margin-bottom: 6px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+#dialogue-text {
+    line-height: 1.5;
+    min-height: 40px;
+    white-space: pre-wrap;
+    word-spacing: normal;
+    letter-spacing: normal;
+    font-family: Arial, sans-serif;
+}
+
+#dialogue-choices {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.choice-btn {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.5);
+    padding: 8px 14px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 4px;
+    transition: background 0.15s, border-color 0.15s;
+    letter-spacing: normal;
+    word-spacing: normal;
+}
+
+.choice-btn:hover {
+    background: rgba(255,255,255,0.22);
+    border-color: white;
+}
+
+#dialogue-hint {
+    margin-top: 10px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+    text-align: center;
+}
+/* MOBILE CONTROLS */
+#mobile-controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 200px;
+    pointer-events: none;
+    z-index: 200;
+}
+
+#joystick-zone {
+    position: absolute;
+    bottom: 30px;
+    left: 30px;
+    width: 130px;
+    height: 130px;
+    pointer-events: all;
+}
+
+#joystick-base {
+    position: absolute;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.5);
+    border: 3px solid rgba(255,255,255,0.5);
+}
+
+#joystick-knob {
+    position: absolute;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.5);
+    border: 3px solid rgba(255,255,255,0.5);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+#talk-btn {
+    position: absolute;
+    bottom: 40px;
+    right: 40px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(180, 0, 255, 0.5);
+    border: 3px solid rgba(255,255,255,0.5);
+    color: white;
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: all;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    text-align: center;
+    line-height: 1.2;
+}
+
+/* TRANSITION OVERLAY */
+#transition-overlay {
+    position: fixed;
+    inset: 0;
+    background: black;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transition: opacity 1.2s ease;
+}
+
+#transition-overlay.fade-in {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* GIFT OPEN BUTTON */
+#gift-open-btn {
+    display: none;
+    margin-top: 14px;
+    padding: 13px 28px;
+    font-family: Arial, sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    color: #fff;
+    background: rgba(255,255,255,0.12);
+    border: 2px solid rgba(255,255,255,0.5);
+    border-radius: 30px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    width: 100%;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+#gift-open-btn:hover {
+    background: rgba(255,255,255,0.22);
+    border-color: white;
+}
+
+#gift-open-btn.visible {
+    display: block;
+}
+
+/* VIDEO OVERLAY */
+/* VIDEO OVERLAY */
+#video-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.96);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    overflow: hidden;
+}
+
+#video-overlay.show {
+    display: flex;
+}
+
+/* TREASURE WRAPPER — pops and shakes on open */
+#gift-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+    z-index: 2;
+}
+
+#gift-wrapper.pop {
+    animation: treasurePop 0.55s cubic-bezier(0.22, 1.8, 0.4, 1) forwards;
+}
+
+@keyframes treasurePop {
+    0%   { transform: scale(0.3) rotate(-4deg); opacity: 0; }
+    60%  { transform: scale(1.07) rotate(2deg); opacity: 1; }
+    75%  { transform: scale(0.97) rotate(-1deg); }
+    88%  { transform: scale(1.03) rotate(0.5deg); }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* REWARD TITLE */
+#reward-title {
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #c8a84b;
+    text-shadow: 0 0 10px rgba(200,168,75,0.6);
+    animation: titleGlow 2s ease-in-out infinite;
+    opacity: 0;
+    transition: opacity 0.4s;
+}
+
+#reward-title.show { opacity: 1; }
+
+@keyframes titleGlow {
+    0%, 100% { text-shadow: 0 0 8px rgba(200,168,75,0.5); }
+    50%       { text-shadow: 0 0 18px rgba(200,168,75,0.9), 0 0 30px rgba(200,168,75,0.3); }
+}
+
+/* IFRAME */
+#video-overlay iframe {
+    max-width: 90vw;
+    width: 800px;
+    height: 450px;
+    max-height: 75vh;
+    border-radius: 10px;
+    border: 2px solid #c8a84b;
+    box-shadow:
+        0 0 0 1px rgba(200,168,75,0.2),
+        0 0 24px rgba(200,168,75,0.25),
+        0 12px 40px rgba(0,0,0,0.8);
+}
+
+@media (max-width: 768px) {
+    #video-overlay iframe {
+        width: 95vw;
+        height: 54vw;
+    }
+}
+
+/* CLOSE BUTTON */
+#video-close-btn {
+    padding: 10px 32px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    font-weight: bold;
+    background: rgba(200,168,75,0.1);
+    color: #c8a84b;
+    border: 1px solid rgba(200,168,75,0.4);
+    border-radius: 20px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+#video-close-btn:hover {
+    background: rgba(200,168,75,0.2);
+    border-color: #c8a84b;
+}
+
+/* PARTICLES CANVAS */
+#reward-particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+</style>
+</head>
+
+<body>
+
+<!-- BACKGROUND MUSIC -->
+<audio id="bgm" src="pics/bgm.m4a" loop></audio>
+
+<div id="game">
+
+    <div id="world">
+
+        <img id="map" src="pics/bg.png">
+
+        <!-- PLAYER -->
+        <div id="player" class="entity">
+            <img id="playerSprite" src="pics/ashyfront.png">
+        </div>
+
+        <!-- KUROMI -->
+        <div id="kuromi" class="entity">
+            <img id="kuromiSprite" src="pics/kuromidown0.png">
+        </div>
+
+        <!-- NPC -->
+        <div id="npc" class="entity">
+            <img id="npcSprite" src="pics/asisfront.png" class="npc-breathe">
+        </div>
+
+    </div>
+
+    <div id="dialogue-box">
+        <div id="dialogue-name"></div>
+        <div id="dialogue-text"></div>
+        <div id="dialogue-choices"></div>
+        <button id="gift-open-btn" onclick="openGiftVideo()">🎁 Open</button>
+        <div id="dialogue-hint">[SPACE] to talk</div>
+    </div>
+
+    <!-- MOBILE CONTROLS -->
+    <div id="mobile-controls">
+        <div id="joystick-zone">
+            <div id="joystick-base"></div>
+            <div id="joystick-knob"></div>
+        </div>
+        <div id="talk-btn">TALK</div>
+    <div id="transition-overlay"></div>
+</div>
+
+<!-- VIDEO OVERLAY -->
+<div id="video-overlay">
+    <canvas id="reward-particles"></canvas>
+    <div id="gift-wrapper">
+        <div id="reward-title">🏆 &nbsp; Gift Unlocked &nbsp; 🏆</div>
+        <iframe id="gift-video"
+            src=""
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen>
+        </iframe>
+        <button id="video-close-btn" onclick="closeGiftVideo()">✕ Close</button>
+    </div>
+</div>
+
+<script>
+
+/* BACKGROUND MUSIC — autoplay immediately */
+const bgm = document.getElementById("bgm");
+bgm.volume = 0.2;
+const savedTime = parseFloat(sessionStorage.getItem("bgm_time") || "0");
+bgm.currentTime = savedTime;
+sessionStorage.removeItem("bgm_time");
+bgm.play().catch(() => {
+    // Autoplay blocked — wait for first interaction
+    const unlock = () => { bgm.play().catch(() => {}); };
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+});
+
+/* INPUT */
+const keys = {};
+window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+/* MOBILE JOYSTICK */
+const joystickZone = document.getElementById("joystick-zone");
+const joystickKnob = document.getElementById("joystick-knob");
+const talkBtn = document.getElementById("talk-btn");
+
+const joystickRadius = 38;
+let joystickActive = false;
+let joystickOrigin = { x: 0, y: 0 };
+let joystickDelta = { x: 0, y: 0 };
+
+function getJoystickPos(e) {
+    const touch = e.touches ? e.touches[0] : e;
+    const rect = joystickZone.getBoundingClientRect();
+    return {
+        x: touch.clientX - rect.left - 65,
+        y: touch.clientY - rect.top - 65
+    };
+}
+
+joystickZone.addEventListener("touchstart", e => {
+    e.preventDefault();
+    joystickActive = true;
+    const pos = getJoystickPos(e);
+    joystickDelta = pos;
+    updateKnob();
+}, { passive: false });
+
+joystickZone.addEventListener("touchmove", e => {
+    e.preventDefault();
+    if (!joystickActive) return;
+    const pos = getJoystickPos(e);
+    const dist = Math.sqrt(pos.x * pos.x + pos.y * pos.y);
+    if (dist > joystickRadius) {
+        joystickDelta.x = (pos.x / dist) * joystickRadius;
+        joystickDelta.y = (pos.y / dist) * joystickRadius;
+    } else {
+        joystickDelta = pos;
+    }
+    updateKnob();
+}, { passive: false });
+
+joystickZone.addEventListener("touchend", e => {
+    e.preventDefault();
+    joystickActive = false;
+    joystickDelta = { x: 0, y: 0 };
+    updateKnob();
+}, { passive: false });
+
+function updateKnob() {
+    joystickKnob.style.transform =
+        `translate(calc(-50% + ${joystickDelta.x}px), calc(-50% + ${joystickDelta.y}px))`;
+}
+
+// Talk button fires space key
+talkBtn.addEventListener("touchstart", e => {
+    e.preventDefault();
+    keys[" "] = true;
+}, { passive: false });
+
+talkBtn.addEventListener("touchend", e => {
+    e.preventDefault();
+    keys[" "] = false;
+}, { passive: false });
+
+/* ELEMENTS */
+const player = document.getElementById("player");
+const playerSprite = document.getElementById("playerSprite");
+
+const kuromi = document.getElementById("kuromi");
+const kuromiSprite = document.getElementById("kuromiSprite");
+
+const npcEl = document.getElementById("npc");
+
+const world = document.getElementById("world");
+const map = document.getElementById("map");
+
+/* DIALOGUE SYSTEM */
+const dialogueBox = document.getElementById("dialogue-box");
+const dialogueName = document.getElementById("dialogue-name");
+const dialogueText = document.getElementById("dialogue-text");
+const dialogueChoices = document.getElementById("dialogue-choices");
+const dialogueHint = document.getElementById("dialogue-hint");
+
+let dialogueState = "idle"; // idle, typing, waiting, choices, done
+let typeInterval = null;
+let dialogueLocked = false;
+let spaceWasDown = false;
+
+function clearChoices() {
+    dialogueChoices.innerHTML = "";
+}
+
+function typeText(text, onDone) {
+    dialogueText.innerText = "";
+    dialogueState = "typing";
+    dialogueLocked = true;
+    let i = 0;
+    clearInterval(typeInterval);
+    typeInterval = setInterval(() => {
+        dialogueText.innerText += text[i];
+        i++;
+        if (i >= text.length) {
+            clearInterval(typeInterval);
+            dialogueState = "waiting";
+            if (onDone) onDone();
+        }
+    }, 30);
+}
+
+function showDialogue(name, text, choices, showGift) {
+    dialogueBox.style.display = "block";
+    dialogueName.innerText = name;
+    clearChoices();
+    dialogueHint.style.display = "none";
+    document.getElementById("gift-open-btn").classList.remove("visible");
+
+    typeText(text, () => {
+        if (choices && choices.length > 0) {
+            showChoices(choices);
+        } else if (showGift) {
+            // show received message then gift button
+            const receivedLine = document.createElement("div");
+            receivedLine.style.cssText = "margin-top:10px;font-size:13px;color:rgba(255,255,255,0.6);text-align:center;";
+            receivedLine.textContent = "✨ (You Received Something from Ais!) ✨";
+            dialogueChoices.appendChild(receivedLine);
+            setTimeout(() => {
+                document.getElementById("gift-open-btn").classList.add("visible");
+            }, 600);
+            dialogueState = "choices";
+            dialogueLocked = false;
+        } else {
+            dialogueHint.innerText = "[SPACE] to close";
+            dialogueHint.style.display = "block";
+            dialogueState = "done";
+            dialogueLocked = false;
+        }
+    });
+}
+
+function showChoices(choices) {
+    clearChoices();
+    choices.forEach(c => {
+        const btn = document.createElement("button");
+        btn.className = "choice-btn";
+        btn.innerText = c.label;
+        btn.addEventListener("click", () => {
+            clearChoices();
+            c.onChoose();
+        });
+        dialogueChoices.appendChild(btn);
+    });
+    dialogueState = "choices";
+    dialogueLocked = false;
+}
+
+function closeDialogue() {
+    dialogueBox.style.display = "none";
+    dialogueState = "idle";
+    dialogueLocked = false;
+    clearChoices();
+    clearInterval(typeInterval);
+    document.getElementById("gift-open-btn").classList.remove("visible");
+}
+
+/* AIS DEFEATED FLAG */
+const aisDefeated = sessionStorage.getItem("aistubig_defeated") === "1";
+
+/* AIS DIALOGUE TREE */
+function startAisDialogue() {
+    if (aisDefeated) {
+        startAisDefeatedDialogue();
+        return;
+    }
+    showDialogue(
+        "Ais",
+        "bb, wala man po talagang angry monster. hihi, i'm just baiting you. want lang kita makasama here.",
+        [
+            {
+                label: "bwiset ka tlaga ais",
+                onChoose: () => aisReplyBwiset()
+            },
+            {
+                label: "para kang sweetcorn",
+                onChoose: () => aisReplySweet()
+            }
+        ]
+    );
+}
+
+function startAisDefeatedDialogue() {
+    showDialogue(
+        "Ais",
+        "natalo mo na me 😔 you will receive some gift! sorry i acted like that earlier nasapian lang ako ng masamang demonyo, kunin mo nlang to bb  🎁",
+        null,
+        true // show gift button after typing
+    );
+}
+
+function openGiftVideo() {
+    document.getElementById("gift-open-btn").classList.remove("visible");
+    closeDialogue();
+    bgm.pause();
+    const overlay = document.getElementById("video-overlay");
+    overlay.classList.add("show");
+
+    // Reset wrapper for re-trigger
+    const wrapper = document.getElementById("gift-wrapper");
+    wrapper.classList.remove("pop");
+    void wrapper.offsetWidth; // reflow
+    wrapper.classList.add("pop");
+
+    // Show reward title after pop
+    const title = document.getElementById("reward-title");
+    title.classList.remove("show");
+    setTimeout(() => title.classList.add("show"), 300);
+
+    // Gold particles burst
+    burstParticles();
+
+    const iframe = document.getElementById("gift-video");
+    iframe.src = "https://www.youtube.com/embed/J1kLwl8PH6g?autoplay=1";
+}
+
+function closeGiftVideo() {
+    const overlay = document.getElementById("video-overlay");
+    overlay.classList.remove("show");
+    const iframe = document.getElementById("gift-video");
+    iframe.src = "";
+    document.getElementById("reward-title").classList.remove("show");
+    bgm.play().catch(() => {});
+}
+
+/* GOLD PARTICLE BURST */
+function burstParticles() {
+    const canvas = document.getElementById("reward-particles");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const colors = ["#f5d060", "#c8a84b", "#fff8dc", "#e8b84b", "#fffacd", "#d4af37"];
+
+    const particles = Array.from({ length: 80 }, () => {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 4 + Math.random() * 10;
+        const size = 3 + Math.random() * 5;
+        const shape = Math.random() < 0.5 ? "circle" : "rect";
+        return {
+            x: cx, y: cy,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - (Math.random() * 4),
+            size,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            alpha: 1,
+            shape,
+            rotation: Math.random() * Math.PI * 2,
+            rotSpeed: (Math.random() - 0.5) * 0.2
+        };
+    });
+
+    let frame;
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let alive = false;
+        particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.3; // gravity
+            p.alpha -= 0.018;
+            p.rotation += p.rotSpeed;
+            if (p.alpha <= 0) return;
+            alive = true;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.alpha);
+            ctx.fillStyle = p.color;
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+            if (p.shape === "circle") {
+                ctx.beginPath();
+                ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+            }
+            ctx.restore();
+        });
+        if (alive) frame = requestAnimationFrame(draw);
+        else ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    cancelAnimationFrame(frame);
+    draw();
+}
+
+function aisReplyBwiset() {
+    showDialogue(
+        "Ais",
+        "HA!! anong bwiset?? bb, gusto lang naman kita makasama e. sige, bahala ka! i will show u my true form.",
+        [
+            {
+                label: "hala bb joke lang eh",
+                onChoose: () => aisReplyJoke()
+            },
+            {
+                label: "pake ko sayo bugbugin pa kita dyan",
+                onChoose: () => aisReplyBugbug()
+            }
+        ]
+    );
+}
+
+function aisReplySweet() {
+    showDialogue("Ais", "ihh, pinagt-tripan mo nanaman me bb. galit na ako.",
+        [
+            {
+                label: "hala bb joke lang eh",
+                onChoose: () => aisReplyJoke()
+            },
+            {
+                label: "pake ko sayo bugbugin pa kita dyan",
+                onChoose: () => aisReplyBugbug()
+            }
+        ]
+    );
+}
+
+function goToBattle() {
+    const overlay = document.getElementById("transition-overlay");
+    sessionStorage.setItem("bgm_time", bgm.currentTime);
+    setTimeout(() => {
+        overlay.classList.add("fade-in");
+        setTimeout(() => { window.location.href = "battlesim.html"; }, 1300);
+    }, 2500);
+}
+
+function aisReplyJoke() {
+    showDialogue("Ais", "anong joke? wala namang joke joke. sige, goodbye.", null);
+    goToBattle();
+}
+
+function aisReplyBugbug() {
+    showDialogue("Ais", "sigi, sabi mo. kahit magsama pa kayo ni kuromi.", null);
+    goToBattle();
+}
+
+/* PLAYER */
+let px = 0;
+let py = 0;
+const speed = 6;
+const size = 120;
+let dir = "down";
+
+/* KUROMI */
+let kx = 0;
+let ky = 0;
+const followSpeed = 3;
+
+let frame = 0;
+let tick = 0;
+let lastDir = "down";
+
+/* MAP */
+let mapW = 2000;
+let mapH = 2000;
+
+/* NPC */
+const npc = {
+    x: 0,
+    y: 0,
+
+    // 🟢 CENTER HITBOX ONLY
+    hitbox: {
+        x: 40,
+        y: 45,
+        width: 40,
+        height: 40
+    }
+};
+
+/* PLAYER HITBOX */
+const playerHitbox = {
+    x: 30,
+    y: 30,
+    width: 60,
+    height: 80
+};
+
+/* CAMERA */
+let camX = 0;
+let camY = 0;
+
+/* COLLISION */
+function collide(a, b) {
+    return (
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.y + a.height > b.y
+    );
+}
+
+/* INIT */
+map.onload = () => {
+    mapW = map.naturalWidth || 2000;
+    mapH = map.naturalHeight || 2000;
+
+    px = mapW / 2;
+    py = mapH / 2;
+
+    kx = px - 120;
+    ky = py;
+
+    npc.x = mapW / 2;
+    npc.y = 100;
+};
+
+/* PLAYER SPRITE */
+function updatePlayerSprite() {
+    if (dir === "up") playerSprite.src = "pics/ashyback.png";
+    if (dir === "down") playerSprite.src = "pics/ashyfront.png";
+    if (dir === "left") playerSprite.src = "pics/ashyleft.png";
+    if (dir === "right") playerSprite.src = "pics/ashyright.png";
+}
+
+/* LOOP */
+function loop() {
+
+    let nextX = px;
+    let nextY = py;
+
+    // Joystick threshold
+    const joyThresh = 8;
+
+    if (keys["w"] || keys["arrowup"] || joystickDelta.y < -joyThresh) { nextY -= speed; dir = "up"; lastDir = "up"; }
+    if (keys["s"] || keys["arrowdown"] || joystickDelta.y > joyThresh) { nextY += speed; dir = "down"; lastDir = "down"; }
+    if (keys["a"] || keys["arrowleft"] || joystickDelta.x < -joyThresh) { nextX -= speed; dir = "left"; lastDir = "left"; }
+    if (keys["d"] || keys["arrowright"] || joystickDelta.x > joyThresh) { nextX += speed; dir = "right"; lastDir = "right"; }
+
+    const pBox = {
+        x: nextX + playerHitbox.x,
+        y: nextY + playerHitbox.y,
+        width: playerHitbox.width,
+        height: playerHitbox.height
+    };
+
+    const nBox = {
+        x: npc.x + npc.hitbox.x,
+        y: npc.y + npc.hitbox.y,
+        width: npc.hitbox.width,
+        height: npc.hitbox.height
+    };
+
+    // 🚫 NPC SOLID ONLY CENTER HITBOX
+    if (!collide(pBox, nBox)) {
+        px = nextX;
+        py = nextY;
+    }
+
+    updatePlayerSprite();
+
+    /* KUROMI */
+    let dx = px - kx;
+    let dy = py - ky;
+    let dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist > 0) {
+        dx /= dist;
+        dy /= dist;
+    }
+
+    if (dist > 100) {
+        kx += dx * followSpeed;
+        ky += dy * followSpeed;
+    }
+
+    kuromiSprite.src = `pics/kuromi${lastDir}${frame}.png`;
+
+    tick++;
+    if (tick % 8 === 0) frame = (frame + 1) % 4;
+
+    /* NPC */
+    npcEl.style.transform =
+        `translate3d(${npc.x}px, ${npc.y}px, 0)`;
+
+    /* INTERACTION */
+    let npcDist = Math.hypot(px - npc.x, py - npc.y);
+    const spaceDown = keys[" "];
+
+    if (npcDist < 120) {
+        if (dialogueState === "idle") {
+            dialogueHint.innerText = "[SPACE] to talk";
+            dialogueHint.style.display = "block";
+            dialogueBox.style.display = "block";
+            dialogueName.innerText = "";
+            dialogueText.innerText = "";
+        }
+
+        // Trigger dialogue on fresh space press
+        if (spaceDown && !spaceWasDown) {
+            if (dialogueState === "idle") {
+                startAisDialogue();
+            } else if (dialogueState === "done") {
+                closeDialogue();
+            }
+        }
+    } else {
+        if (dialogueState === "idle") {
+            dialogueBox.style.display = "none";
+        }
+        if (dialogueState === "done") {
+            closeDialogue();
+        }
+    }
+
+    spaceWasDown = spaceDown;
+
+    /* RENDER */
+    player.style.transform =
+        `translate3d(${px}px, ${py}px, 0)`;
+
+    kuromi.style.transform =
+        `translate3d(${kx}px, ${ky}px, 0)`;
+
+    /* CAMERA */
+    const sw = window.innerWidth;
+    const sh = window.innerHeight;
+
+    let targetX = sw / 2 - px;
+    let targetY = sh / 2 - py;
+
+    if (mapW > sw) targetX = Math.min(0, Math.max(sw - mapW, targetX));
+    if (mapH > sh) targetY = Math.min(0, Math.max(sh - mapH, targetY));
+
+    camX += (targetX - camX) * 0.12;
+    camY += (targetY - camY) * 0.12;
+
+    world.style.transform =
+        `translate3d(${camX | 0}px, ${camY | 0}px, 0)`;
+
+    requestAnimationFrame(loop);
+}
+
+loop();
+
+</script>
+
+</body>
+</html>

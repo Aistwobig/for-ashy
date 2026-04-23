@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hi bb ko ko</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <img src="pics/pixelartkur.gif" alt="Kuromi" class="floating-kuromi" onclick="showPassword()">
+        <div class="greeting">hi bb click kuromi</div>
+        
+        <div class="password-section" id="passwordSection">
+            <div class="question" id="question">sino love and first girlfriend ko?</div>
+            <div class="input-group">
+                <input type="text" id="answerInput" placeholder="Enter your answer..." />
+                <button onclick="checkAnswer()">Submit</button>
+            </div>
+            <div class="message" id="message">
+                <div class="chatbox" id="successChatbox" style="display: none;">
+                    <div class="chat-text" id="chatText"></div>
+                </div>
+                <div class="chatbox error-chatbox" id="errorChatbox" style="display: none;">
+                    <div class="chat-text" id="errorText"></div>
+                </div>
+                <button class="okie-button" id="okieButton" style="display: none;" onclick="handleOkie()">okie bb</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showPassword() {
+            const section = document.getElementById('passwordSection');
+            const greeting = document.querySelector('.greeting');
+            section.classList.add('show');
+            greeting.style.display = 'none';
+            document.getElementById('answerInput').focus();
+        }
+
+        function checkAnswer() {
+            const answer = document.getElementById('answerInput').value.trim().toLowerCase();
+            const message = document.getElementById('message');
+            const successChatbox = document.getElementById('successChatbox');
+            const errorChatbox = document.getElementById('errorChatbox');
+            const chatText = document.getElementById('chatText');
+            const errorText = document.getElementById('errorText');
+            const question = document.getElementById('question');
+            
+            // You can customize this answer - change "ashy" to whatever the correct answer is
+            const correctAnswer = 'ashy';
+            
+            if (answer === correctAnswer) {
+                const dialogue = 'yehey correct answer! , bb please save me i\'m trapped in a game , kuromi will help u po okie, i got kidnapped by angermon badmontser';
+                message.className = 'message success';
+                document.getElementById('answerInput').disabled = true;
+                question.style.display = 'none'; // Hide the question
+                errorChatbox.style.display = 'none'; // Hide error if it was shown
+                typeWriter(chatText, dialogue, () => {
+                    // Callback when typing is done
+                    document.getElementById('okieButton').style.display = 'block';
+                });
+                successChatbox.style.display = 'block';
+            } else {
+                const tryAgain = '❌ Wrong! Try again...';
+                message.className = 'message error';
+                document.getElementById('answerInput').value = '';
+                document.getElementById('answerInput').focus();
+                
+                // Show error chatbox with typing animation
+                errorChatbox.style.display = 'block';
+                typeWriter(errorText, tryAgain, null, 30);
+                
+                // Hide error chatbox after 2 seconds to allow retry
+                setTimeout(() => {
+                    errorChatbox.style.display = 'none';
+                }, 2500);
+            }
+        }
+
+        function typeWriter(element, text, callback, speed = 50) {
+            let i = 0;
+            element.textContent = '';
+            function type() {
+                if (i < text.length) {
+                    element.textContent += text.charAt(i);
+                    i++;
+                    setTimeout(type, speed);
+                } else {
+                    if (callback) callback(); // Call callback when typing is done
+                }
+            }
+            type();
+        }
+
+        function handleOkie() {
+            // Add some interactive effect when clicked
+            const button = document.getElementById('okieButton');
+            button.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                button.style.transform = 'scale(1)';
+                // Navigate to game.html
+                window.location.href = 'game.html';
+            }, 150);
+        }
+
+        // Allow pressing Enter to submit
+        document.getElementById('answerInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkAnswer();
+            }
+        });
+    </script>
+</body>
+</html>
