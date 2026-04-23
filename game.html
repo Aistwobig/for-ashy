@@ -302,7 +302,6 @@ html, body {
 }
 
 /* VIDEO OVERLAY */
-/* VIDEO OVERLAY */
 #video-overlay {
     display: none;
     position: fixed;
@@ -457,6 +456,8 @@ html, body {
             <div id="joystick-knob"></div>
         </div>
         <div id="talk-btn">TALK</div>
+    </div>
+    
     <div id="transition-overlay"></div>
 </div>
 
@@ -492,8 +493,12 @@ bgm.play().catch(() => {
 
 /* INPUT */
 const keys = {};
-window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+window.addEventListener("keydown", e => {
+    keys[e.key.toLowerCase()] = true;
+});
+window.addEventListener("keyup", e => {
+    keys[e.key.toLowerCase()] = false;
+});
 
 /* MOBILE JOYSTICK */
 const joystickZone = document.getElementById("joystick-zone");
@@ -928,10 +933,11 @@ function loop() {
     // Joystick threshold
     const joyThresh = 8;
 
-    if (keys["w"] || keys["arrowup"] || joystickDelta.y < -joyThresh) { nextY -= speed; dir = "up"; lastDir = "up"; }
-    if (keys["s"] || keys["arrowdown"] || joystickDelta.y > joyThresh) { nextY += speed; dir = "down"; lastDir = "down"; }
-    if (keys["a"] || keys["arrowleft"] || joystickDelta.x < -joyThresh) { nextX -= speed; dir = "left"; lastDir = "left"; }
-    if (keys["d"] || keys["arrowright"] || joystickDelta.x > joyThresh) { nextX += speed; dir = "right"; lastDir = "right"; }
+    let isMoving = false;
+    if (keys["w"] || keys["arrowup"] || joystickDelta.y < -joyThresh) { nextY -= speed; dir = "up"; lastDir = "up"; isMoving = true; }
+    if (keys["s"] || keys["arrowdown"] || joystickDelta.y > joyThresh) { nextY += speed; dir = "down"; lastDir = "down"; isMoving = true; }
+    if (keys["a"] || keys["arrowleft"] || joystickDelta.x < -joyThresh) { nextX -= speed; dir = "left"; lastDir = "left"; isMoving = true; }
+    if (keys["d"] || keys["arrowright"] || joystickDelta.x > joyThresh) { nextX += speed; dir = "right"; lastDir = "right"; isMoving = true; }
 
     const pBox = {
         x: nextX + playerHitbox.x,
